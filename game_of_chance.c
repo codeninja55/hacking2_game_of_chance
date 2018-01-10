@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
         printf("[6] | Reset your account at 100 credits\n");
         printf("[7] | Quit\n");
         printf("\n[Name] | %s\n", player.name);
-        printf("\n[Credits] | %u\n", player.credits);
+        printf("[Credits] | %u\n", player.credits);
         printf(">> ");
         scanf("%d", &choice);
 
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
             show_highscore();
         } else if(choice == 5) {
             printf("\nChange user name\n");
-            printf("Enter your new user name: ");
+            printf("Enter your new user name >>  ");
             input_name();
             printf("Your name has been changed. \n\n");
         } else if(choice == 6) {
@@ -94,6 +94,24 @@ int main(int argc, char *argv[]) {
 
     update_player_data();
     printf("\nThanks for playing! Bye.\n");
+}
+
+/* This function is used to input the player name, since
+ * scanf("%s", &whatever) will stop input at the first space. */
+void input_name() {
+    char *name_ptr, input_char='\n';
+
+    // Flush any leftover newline chars
+    while(input_char == '\n')
+        scanf("%c", &input_char);
+
+    name_ptr = (char *) &(player.name);  // name_ptr = player name's address
+    while(input_char != '\n') {          // Loop until newline.
+        *name_ptr = input_char;          // Put the input char into name field.
+        scanf("%c", &input_char);        // Get the next char.
+        name_ptr++;                      // Increment the name pointer.
+    }
+    *name_ptr = 0;  // Terminate the string.
 }
 
 /* This function reads the player data for the current uid from the file.
@@ -108,6 +126,8 @@ int get_player_data() {
     if(fd == -1)  // Can't open the file, maybe it doesn't exist
         return -1;
 
+    // Uses the sizeof() macro to find the struct data type size of user
+    // Uses this value to read only this many characters from the file
     read_bytes = read(fd, &entry, sizeof(struct user));      // Read the first chunk
     while(entry.uid != uid && read_bytes > 0) {              // Loop until proper uid is found
         read_bytes = read(fd, &entry, sizeof(struct user));  // Keep reading
@@ -121,3 +141,31 @@ int get_player_data() {
 
     return 1;  // Return a success
 }
+
+/* This function is for new user registrations.
+ * It will create a new player account and append it to the file. */
+void register_new_player() {
+    int fd;
+
+    printf("|===={ New Player Registration }====|\n");
+    printf("Enter your user name >>  ");
+    input_name();
+
+    player.uid = getuid();
+    player.highscore = player.credits = 100;
+
+    fd = open(DATAFILE, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR);
+
+    if(fd == -1)
+        fatal("in register_new_player() while opening file");
+
+    write(fd, &player, sizeof(struct user));
+    close(fd);
+
+    printf("\nWelcome to the Game of Chance %s.\n", player.name);
+    printf("You have been given %u credits.\n", player.credits);
+}
+
+/* This function writes the current player data to the file.
+ * It is used primarily for updating the credits after game. */
+
