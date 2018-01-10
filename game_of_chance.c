@@ -96,3 +96,28 @@ int main(int argc, char *argv[]) {
     printf("\nThanks for playing! Bye.\n");
 }
 
+/* This function reads the player data for the current uid from the file.
+ * Returns: -1 if it is unable to find a player data for current uid. */
+int get_player_data() {
+    int fd, uid, read_bytes;
+    struct user entry;
+
+    uid = getuid();
+    fd = open(DATAFILE, O_RDONLY);
+
+    if(fd == -1)  // Can't open the file, maybe it doesn't exist
+        return -1;
+
+    read_bytes = read(fd, &entry, sizeof(struct user));      // Read the first chunk
+    while(entry.uid != uid && read_bytes > 0) {              // Loop until proper uid is found
+        read_bytes = read(fd, &entry, sizeof(struct user));  // Keep reading
+    }
+    close(fd);  // Close the file
+
+    if(read_bytes < sizeof(struct user))  // This means that the EOF was reached.
+        return -1;
+    else
+        player = entry;  // Copy the read entry into the player struct.
+
+    return 1;  // Return a success
+}
